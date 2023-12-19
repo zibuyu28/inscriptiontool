@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
@@ -10,17 +11,19 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
+	"golang.org/x/exp/rand"
 	"inscriptiontool/wallet"
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
 
 type Info struct {
 	Account        string
-	Rpc            string
+	Rpcs           []string
 	To             string
 	Amount         float64
 	GF             float64
@@ -41,20 +44,29 @@ func Run(info Info) error {
 
 	ac := common.HexToAddress(account.Address)
 
-	client, err := ethclient.Dial(info.Rpc)
-	if err != nil {
-		return errors.Wrap(err, "error dialing ethereum client")
+	var cs clients
+	for _, rpc := range info.Rpcs {
+		client, err := ethclient.Dial(rpc)
+		if err != nil {
+			fmt.Printf("rpc is dail is failed, %v\n", err)
+			continue
+		}
+		cs = append(cs, client)
 	}
-	chainId, err := client.ChainID(context.Background())
+	if len(cs) == 0 {
+		return errors.New("all rpc are invalid")
+	}
+
+	chainId, err := cs.getClient().ChainID(context.Background())
 	if err != nil {
 		return errors.Wrap(err, "get chain id")
 	}
 
-	nonce, err := client.PendingNonceAt(context.Background(), ac)
+	nonce, err := cs.getClient().PendingNonceAt(context.Background(), ac)
 	if err != nil {
 		return errors.Wrap(err, "get nonce")
 	}
-	gp, err := client.SuggestGasPrice(context.Background())
+	gp, err := cs.getClient().SuggestGasPrice(context.Background())
 	if err != nil {
 		return errors.Wrap(err, "get gas price")
 	}
@@ -67,17 +79,32 @@ func Run(info Info) error {
 	}
 	amount := big.NewInt(int64(info.Amount * 1e18))
 
-	data := []byte(info.Data)
+	var data []byte
+	if strings.HasPrefix(info.Data, "0x") {
+		da := strings.TrimPrefix(info.Data, "0x")
+		data, err = hex.DecodeString(da)
+		if err != nil {
+			return errors.Wrap(err, "decode data")
+		}
+	} else {
+		data = []byte(info.Data)
+	}
 	signer := types.NewLondonSigner(chainId)
 	privateKey, err := crypto.HexToECDSA(account.Private)
 	if err != nil {
 		return errors.Wrap(err, "error parsing private key")
 	}
-	return loop(info.Count, info, client, signer, privateKey, nonce, to, amount, gasPrice, data)
+	return loop(info.Count, info, cs, signer, privateKey, nonce, to, amount, gasPrice, data)
+}
+
+type clients []*ethclient.Client
+
+func (cs clients) getClient() *ethclient.Client {
+	return cs[rand.Intn(len(cs))]
 }
 
 func loop(count int, info Info,
-	client *ethclient.Client,
+	cs clients,
 	signer types.Signer,
 	privateKey *ecdsa.PrivateKey,
 	nonce uint64,
@@ -100,7 +127,7 @@ func loop(count int, info Info,
 			defer wg.Done()
 		PP:
 			if ncc%10 == 0 {
-				gp, err := client.SuggestGasPrice(context.Background())
+				gp, err := cs.getClient().SuggestGasPrice(context.Background())
 				if err != nil {
 					fmt.Printf("get gas price error, %v\n", err)
 				} else {
@@ -125,7 +152,7 @@ func loop(count int, info Info,
 			fmt.Printf("data : %s\n", signedTx.Data())
 			fmt.Println("=====================================================================================================")
 			// 3. send rawTx
-			err = client.SendTransaction(context.Background(), signedTx)
+			err = cs.getClient().SendTransaction(context.Background(), signedTx)
 			if err != nil {
 				fmt.Printf("send transaction error, %v\n", err)
 				goto PP

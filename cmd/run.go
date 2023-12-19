@@ -21,7 +21,7 @@ var runCmd = &cobra.Command{
 
 var i = run.Info{
 	Account:        "",
-	Rpc:            "",
+	Rpcs:           []string{},
 	To:             "",
 	Amount:         0,
 	GF:             1,
@@ -37,7 +37,7 @@ func init() {
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	runCmd.PersistentFlags().StringVarP(&i.Rpc, "rpcUrl", "r", "", "rpc 地址")
+	runCmd.PersistentFlags().StringSliceVarP(&i.Rpcs, "rpcUrls", "r", []string{}, "rpc 地址,多地址用 *逗号* 隔开")
 	runCmd.MarkPersistentFlagRequired("rpcUrl")
 	runCmd.PersistentFlags().StringVarP(&i.Account, "account", "a", "", "账户名称")
 	runCmd.MarkPersistentFlagRequired("account")
@@ -45,7 +45,7 @@ func init() {
 	runCmd.PersistentFlags().Float64VarP(&i.Amount, "amount", "m", 0, "转账金额, (默认是0)")
 	runCmd.PersistentFlags().Float64VarP(&i.GF, "gf", "g", 1, "gas倍数")
 	runCmd.PersistentFlags().IntVarP(&i.GasLimitFactor, "glf", "l", 2, "gasLimit倍数, 默认是2，即21000*2")
-	runCmd.PersistentFlags().StringVarP(&i.Data, "data", "d", "", "data数据")
+	runCmd.PersistentFlags().StringVarP(&i.Data, "data", "d", "", "data数据,可以是json原文，也可以十六进制, data:,{xxxx}, 0x6137sdxxxx")
 	runCmd.MarkPersistentFlagRequired("data")
 	runCmd.PersistentFlags().IntVarP(&i.Count, "count", "c", 1, "重复次数")
 

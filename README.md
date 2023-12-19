@@ -32,18 +32,18 @@ Usage:
   inscriptiontool run [flags]
 
 Flags:
-  -a, --account string   账户名称
-  -m, --amount float     转账金额, (默认是0)
-  -c, --count int        重复次数 (default 1)
-  -d, --data string      data数据
-  -g, --gf float         gas倍数 (default 1)
-  -l, --glf int          gasLimit倍数, 默认是2，即21000*2 (default 2)
-  -h, --help             help for run
-  -r, --rpcUrl string    rpc 地址
-  -t, --to string        转账To地址, (默认是转给自己)
+  -a, --account string    账户名称
+  -m, --amount float      转账金额, (默认是0)
+  -c, --count int         重复次数 (default 1)
+  -d, --data string       data数据,可以是json原文，也可以十六进制, data:,{xxxx}, 0x6137sdxxxx
+  -g, --gf float          gas倍数 (default 1)
+  -l, --glf int           gasLimit倍数, 默认是2，即21000*2 (default 2)
+  -h, --help              help for run
+  -r, --rpcUrls strings   rpc 地址,多地址用 *逗号* 隔开
+  -t, --to string         转账To地址, (默认是转给自己)
 
 # 开启铭刻任务
 inscriptiontool run -a <wallet name> -m <amount> -t <to address> -r <url> -c <count> -d <data> -g <gas factor> -l <gas limit factor>
 # 使用示例
-inscriptiontool run -a whf -d 'data:,{"p":"bsc-20","op":"mint","tick":"sofi","amt":"4"}' -r 'https://bsc.blockpi.network/v1/rpc/' -c 100
+inscriptiontool run -a whf -d 'data:,{"p":"bsc-20","op":"mint","tick":"sofi","amt":"4"}' -r 'https://a.rpc.io,https://b.rpc.io' -c 100
 ```
